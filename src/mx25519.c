@@ -4,6 +4,14 @@
  * See LICENSE for full license details.
 */
 
+#ifdef __STDC_LIB_EXT1__
+#define __STDC_WANT_LIB_EXT1__ 1
+#endif
+
+#ifdef __GNUC__
+#define _GNU_SOURCE
+#endif
+
 #include <mx25519.h>
 
 #include "impl.h"
@@ -11,9 +19,33 @@
 #include "scalar.h"
 #include "platform.h"
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <assert.h>
+
+/* Define WIPE32() depending on the platform */
+#if __STDC_VERSION__ >= 202311L
+  #define WIPE32(p) memset_explicit(p, 0, 32)
+#elif defined(_DEFAULT_SOURCE) || defined(PLATFORM_BSD)
+  #define WIPE32(p) explicit_bzero(p, 32)
+#elif defined(__STDC_LIB_EXT1__)
+  #define WIPE32(p) memset_s(p, 32, 0, 32)
+#elif defined(PLATFORM_WIN)
+  #include <windows.h>
+  #define WIPE32(p) SecureZeroMemory(p, 32)
+#else
+  void wipe32_volatile(void *p) {
+    /* https://github.com/jedisct1/libsodium/blob/7014b204/src/libsodium/sodium/utils.c#L149-L155 */
+    volatile unsigned char *volatile pnt_ =
+        (volatile unsigned char *volatile) p;
+    size_t i = (size_t) 0U;
+
+    while (i < 32) {
+        pnt_[i++] = 0U;
+    }
+  }
+  #define WIPE32(p) wipe32_volatile(p)
+#endif
 
 static const mx25519_pubkey x25519_base = {
     .data = { 9 }
@@ -62,6 +94,36 @@ static mx25519_type select_best_impl(void) {
 #endif
 }
 
+static void clamp_and_dispatch(const mx25519_impl* impl,
+    mx25519_pubkey* result, const mx25519_privkey* key,
+    const mx25519_pubkey* pt, mx25519_unclamp_flags unclamp_flags)
+{
+    const uint8_t lsb_mask = 248 | ((unclamp_flags & MX25519_UNCLAMP_LSBS) * 7);
+    const uint8_t msb_mask = (~unclamp_flags & MX25519_UNCLAMP_254) << 5;
+    mx25519_privkey clamped_pkey;
+
+    assert(impl != NULL);
+    assert(pt != NULL);
+    assert(key != NULL);
+    assert(result != NULL);
+    assert(impl->scmul != NULL);
+    assert(impl->type <= MX25519_TYPE_AMD64X);
+    assert(MX25519_UNCLAMP_NONE == 0);
+    assert(MX25519_UNCLAMP_ALL == (MX25519_UNCLAMP_254 | MX25519_UNCLAMP_LSBS));
+
+    /* clamp key */
+    clamped_pkey.data[0] = key->data[0] & lsb_mask;
+    for (int i = 1; i < 31; ++i)
+        clamped_pkey.data[i] = key->data[i];
+    clamped_pkey.data[31] = (key->data[31] | msb_mask) & 0x7f;
+
+    /* dispatch */
+    impl->scmul(result->data, clamped_pkey.data, pt->data);
+
+    /* wipe clamped key, don't try to prevent swap-to-disk due to short life */
+    WIPE32(clamped_pkey.data);
+}
+
 const mx25519_impl* mx25519_select_impl(mx25519_type type)
 {
     if (type == MX25519_TYPE_AUTO) {
@@ -83,20 +145,27 @@ mx25519_type mx25519_impl_type(const mx25519_impl* impl)
 void mx25519_scmul_base(const mx25519_impl* impl, mx25519_pubkey* result,
     const mx25519_privkey* key)
 {
-    assert(impl != NULL);
-    assert(key != NULL);
-    assert(result != NULL);
-    impl->scmul(result->data, key->data, x25519_base.data);
+    clamp_and_dispatch(impl, result, key, &x25519_base, MX25519_UNCLAMP_NONE);
+}
+
+void mx25519_scmul_base_unclamped(const mx25519_impl* impl,
+    mx25519_pubkey* result, const mx25519_privkey* key,
+    mx25519_unclamp_flags unclamp_flags)
+{
+    clamp_and_dispatch(impl, result, key, &x25519_base, unclamp_flags);
 }
 
 void mx25519_scmul_key(const mx25519_impl* impl, mx25519_pubkey* result,
     const mx25519_privkey* key, const mx25519_pubkey* pt)
 {
-    assert(impl != NULL);
-    assert(pt != NULL);
-    assert(key != NULL);
-    assert(result != NULL);
-    impl->scmul(result->data, key->data, pt->data);
+    clamp_and_dispatch(impl, result, key, pt, MX25519_UNCLAMP_NONE);
+}
+
+void mx25519_scmul_key_unclamped(const mx25519_impl* impl,
+    mx25519_pubkey* result, const mx25519_privkey* key,
+    const mx25519_pubkey* pt, mx25519_unclamp_flags unclamp_flags)
+{
+    clamp_and_dispatch(impl, result, key, pt, unclamp_flags);
 }
 
 int mx25519_invkey(mx25519_privkey* invkey, const mx25519_privkey keys[],
