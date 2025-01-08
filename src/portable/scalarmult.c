@@ -25,7 +25,7 @@ void mx25519_scalarmult_portable(uint8_t* q,
     unsigned int b;
 
     for (i = 0; i < 32; ++i) e[i] = n[i];
-    e[0] &= 248;
+    //e[0] &= 248;
     e[31] &= 127;
     //e[31] |= 64; do not set bit 254
     fe_frombytes(x1, p);
