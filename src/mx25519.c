@@ -56,7 +56,7 @@ static mx25519_type select_best_impl(void) {
     }
     return MX25519_TYPE_AMD64;
 #elif defined(PLATFORM_ARM64)
-    return MX25519_TYPE_PORTABLE; //! @TODO: switch back to MX25519_TYPE_ARM64 when it works
+    return MX25519_TYPE_ARM64;
 #else
     return MX25519_TYPE_PORTABLE;
 #endif
