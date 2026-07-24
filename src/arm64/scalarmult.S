@@ -120,7 +120,7 @@ DECL(mx25519_scalarmult_arm64):
 	bl	load256unaligned
 
 	and	x3, x3, #0x7fffffffffffffff
-	and	x0, x0, #0xfffffffffffffff8
+	//and	x0, x0, #0xfffffffffffffff8
 	//orr	x3, x3, #0x4000000000000000 //do not set bit 254
 
 	stp	x0, x1, [sp, #104]
@@ -1199,6 +1199,20 @@ mov	v10.d[0], v0.d[1]
 	// Z5 -> Z3 in v11, v13, ..., v19
 
 	bpl	.Lmainloop
+
+	tst	w3, #1
+
+	fcsel	d1, d1, d11, eq
+	fcsel	d3, d3, d13, eq
+	fcsel	d5, d5, d15, eq
+	fcsel	d7, d7, d17, eq
+	fcsel	d9, d9, d19, eq
+
+	fcsel	d0, d0, d10, eq
+	fcsel	d2, d2, d12, eq
+	fcsel	d4, d4, d14, eq
+	fcsel	d6, d6, d16, eq
+	fcsel	d8, d8, d18, eq
 
 	mov	w0, v1.s[0]
 	mov	w1, v1.s[1]

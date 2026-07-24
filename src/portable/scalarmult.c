@@ -11,7 +11,6 @@ void mx25519_scalarmult_portable(uint8_t* q,
     const uint8_t* n,
     const uint8_t* p)
 {
-    uint8_t e[32];
     unsigned int i;
     fe x1;
     fe x2;
@@ -24,10 +23,6 @@ void mx25519_scalarmult_portable(uint8_t* q,
     unsigned int swap;
     unsigned int b;
 
-    for (i = 0; i < 32; ++i) e[i] = n[i];
-    e[0] &= 248;
-    e[31] &= 127;
-    //e[31] |= 64; do not set bit 254
     fe_frombytes(x1, p);
     fe_1(x2);
     fe_0(z2);
@@ -36,7 +31,7 @@ void mx25519_scalarmult_portable(uint8_t* q,
 
     swap = 0;
     for (pos = 254; pos >= 0; --pos) {
-        b = e[pos / 8] >> (pos & 7);
+        b = n[pos / 8] >> (pos & 7);
         b &= 1;
         swap ^= b;
         fe_cswap(x2, x3, swap);

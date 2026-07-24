@@ -14,6 +14,10 @@
 #define PLATFORM_WIN
 #endif
 
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#define PLATFORM_BSD
+#endif
+
 #if defined(_M_IX86) || defined(__i386)
 #define PLATFORM_X86
 #elif defined(_M_X64) || defined(__x86_64__)

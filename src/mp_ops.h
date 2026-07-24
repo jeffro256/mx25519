@@ -9,8 +9,6 @@
 
 #include "digit_ops.h"
 
-#include <string.h>
-
 /* 256x256->512 multiplication */
 static void mp_mul256(
     digit c[8], const digit a[4], const digit b[4]);

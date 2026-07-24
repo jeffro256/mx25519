@@ -58,27 +58,15 @@ sub rsp, 392
 ;# 353 swap flag (1 byte)
 ;# 354 current key byte value (1 byte)
 ;# 356 key byte index (4 bytes)
-;# 360 private key
 
 mov    qword ptr [rsp+288], rbx
 mov    qword ptr [rsp+296], rbp
 mov    qword ptr [rsp+304], rdi
-;# mov    qword ptr [rsp+312], rsi
+mov    qword ptr [rsp+312], rsi
 mov    qword ptr [rsp+320], r12
 mov    qword ptr [rsp+328], r13
 mov    qword ptr [rsp+336], r14
 mov    qword ptr [rsp+344], r15
-
-;# copy the private key and clamp it
-mov    r8, qword ptr [rsi]
-and    r8, -8
-mov    qword ptr [rsp+360], r8
-mov    r8, qword ptr [rsi+8]
-mov    qword ptr [rsp+368], r8
-mov    r8, qword ptr [rsi+16]
-mov    qword ptr [rsp+376], r8
-mov    r8, qword ptr [rsi+24]
-mov    qword ptr [rsp+384], r8
 
 ;# starting from bit 6 of the 31st byte
 mov    eax, 31
@@ -1608,18 +1596,44 @@ mov    byte ptr [rsp+352], cl
 jge    loop_bit
 
 mov    byte ptr [rsp+352], 7
-lea    rsi, [rsp+360]
+mov    rsi, [rsp+312]
 mov    eax, dword ptr [rsp+356]
 sub    eax, 1
 mov    dword ptr [rsp+356], eax
 ;cmp    eax, 0
 jge    loop_byte
 
-;# remove the private key from the stack
-mov    qword ptr [rsi], 0
-mov    qword ptr [rsi+8], 0
-mov    qword ptr [rsi+16], 0
-mov    qword ptr [rsi+24], 0
+;# load select, AKA the LSB
+mov bl, byte ptr [rsp+353]
+cmp bl, 1
+
+;# CSelect(X2,X3,select)
+mov    rsi, qword ptr [rsp+160]
+mov    rbp, qword ptr [rsp+168]
+mov    rcx, qword ptr [rsp+176]
+mov    rax, qword ptr [rsp+184]
+mov    r12, qword ptr [rsp+192]
+mov    r13, qword ptr [rsp+200]
+mov    r14, qword ptr [rsp+208]
+mov    r15, qword ptr [rsp+216]
+cmove  rsi, r12
+cmove  rbp, r13
+cmove  rcx, r14
+cmove  rax, r15
+
+;# CSelect(Z2,Z3,select)
+mov    r8, qword ptr [rsp+224]
+mov    r9, qword ptr [rsp+232]
+mov    r10, qword ptr [rsp+240]
+mov    r11, qword ptr [rsp+248]
+mov    r12, qword ptr [rsp+256]
+mov    r13, qword ptr [rsp+264]
+mov    r14, qword ptr [rsp+272]
+mov    r15, qword ptr [rsp+280]
+cmove  r8, r12
+cmove  r9, r13
+cmove  r10, r14
+cmove  r11, r15
 
 ;# result ← X2 · Z2^(-1)
 
@@ -1632,21 +1646,11 @@ mov    qword ptr [rsi+24], 0
 ;# 128 T4
 ;# 352 invtable position (4 bytes)
 
-;# load result ← Z2
-mov    r8, qword ptr [rsp+224]
-mov    r9, qword ptr [rsp+232]
-mov    r10, qword ptr [rsp+240]
-mov    r11, qword ptr [rsp+248]
-
 ;# T0 ← X2
-mov    r12, qword ptr [rsp+160]
-mov    qword ptr [rsp+0], r12
-mov    r12, qword ptr [rsp+168]
-mov    qword ptr [rsp+8], r12
-mov    r12, qword ptr [rsp+176]
-mov    qword ptr [rsp+16], r12
-mov    r12, qword ptr [rsp+184]
-mov    qword ptr [rsp+24], r12
+mov    qword ptr [rsp+0], rsi
+mov    qword ptr [rsp+8], rbp
+mov    qword ptr [rsp+16], rcx
+mov    qword ptr [rsp+24], rax
 
 ;# T2 ← Z2
 mov    qword ptr [rsp+64], r8
