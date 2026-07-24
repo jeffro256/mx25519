@@ -58,14 +58,12 @@ typedef enum mx25519_type {
     #else
         #define MX25519_API
     #endif
-    #define MX25519_PRIVATE
 #else
     #ifdef MX25519_SHARED
         #define MX25519_API __attribute__ ((visibility ("default")))
     #else
         #define MX25519_API __attribute__ ((visibility ("hidden")))
     #endif
-    #define MX25519_PRIVATE __attribute__ ((visibility ("hidden")))
 #endif
 
 #ifdef __cplusplus

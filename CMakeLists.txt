@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 
 set(MX25519_VERSION 1)
 
@@ -43,7 +43,7 @@ if(ARCH_ID STREQUAL "x86_64" OR ARCH_ID STREQUAL "x86-64" OR ARCH_ID STREQUAL "a
     set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} /DRELWITHDEBINFO")
   else()
     list(APPEND mx25519_sources src/amd64/scalarmult_gnu.S)
-	set_property(SOURCE src/amd64/scalarmult_gnu.S PROPERTY LANGUAGE C)
+    set_property(SOURCE src/amd64/scalarmult_gnu.S PROPERTY LANGUAGE C)
     set_property(SOURCE src/amd64/scalarmult_gnu.S PROPERTY XCODE_EXPLICIT_FILE_TYPE sourcecode.asm)
   endif()
 endif()
@@ -61,7 +61,7 @@ add_library(mx25519 SHARED ${mx25519_sources})
 set_property(TARGET mx25519 PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET mx25519 PROPERTY PUBLIC_HEADER include/mx25519.h)
 include_directories(mx25519
-  include/)
+  PUBLIC include/)
 target_compile_definitions(mx25519 PRIVATE MX25519_SHARED)
 set_target_properties(mx25519 PROPERTIES SOVERSION ${MX25519_VERSION})
 
@@ -69,9 +69,9 @@ add_library(mx25519_static STATIC ${mx25519_sources})
 set_property(TARGET mx25519_static PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET mx25519_static PROPERTY PUBLIC_HEADER include/mx25519.h)
 include_directories(mx25519_static
-  include/)
+  PUBLIC include/)
 set_target_properties(mx25519_static PROPERTIES OUTPUT_NAME mx25519)
-target_compile_definitions(mx25519_static PRIVATE MX25519_STATIC)
+target_compile_definitions(mx25519_static PUBLIC MX25519_STATIC)
 
 add_executable(mx25519-tests
   tests/tests.c)
